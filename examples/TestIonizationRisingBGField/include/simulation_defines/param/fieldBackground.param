@@ -45,7 +45,7 @@ namespace picongpu
                     const uint32_t currentStep ) const
         {
             /* constant electric field over the whole simulation volume in z-direction */
-            return float3_X(0.0, 0.0, 5.14e11 / unitField[2]);
+            return float3_X(0.0, 0.0, 0.1 * currentStep * 5.14e11 / unitField[2]);
         }
     };
 
