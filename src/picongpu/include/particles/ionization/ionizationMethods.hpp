@@ -104,25 +104,27 @@ namespace ionization
             typedef typename SpeciesType::FrameType FrameType;
 
             mpi::SeedPerRank<simDim> seedPerRank;
+            /* creates global seed that is unique for each MPI rank (GPU) and the particle species */
             seed = seedPerRank(GlobalSeed()(), PMacc::traits::GetUniqueTypeId<FrameType, uint32_t>::uid());
-            seed ^= IONIZATION_SEED;
+            /* XOR operations to make seed unique for ionization process and for this time step */
+            seed ^= IONIZATION_SEED ^ currentStep;
 
-            const uint32_t numSlides = MovingWindow::getInstance( ).getSlideCounter( currentStep );
             const SubGrid<simDim>& subGrid = Environment<simDim>::get().SubGrid();
+            /* size of the local domain on the designated GPU in units of cells */
             localCells = subGrid.getLocalDomain().size;
-            DataSpace<simDim> totalGpuOffset = subGrid.getLocalDomain( ).offset;
-            totalGpuOffset.y( ) += numSlides * localCells.y( );
         }
 
-        DINLINE void init(const DataSpace<simDim>& totalCellOffset)
+        DINLINE void init(const DataSpace<simDim>& localCellIdx)
         {
             if (!isInitialized)
             {
-                const DataSpace<simDim> localCellIdx(totalCellOffset - totalGpuOffset);
-                const uint32_t cellIdx = DataSpaceOperations<simDim>::map(
+                /* mapping the multi-dim cell index in the local domain on this GPU
+                 * to a linear index
+                 */
+                const uint32_t linearLocalCellIdx = DataSpaceOperations<simDim>::map(
                                                                           localCells,
                                                                           localCellIdx);
-                rng = nvrng::create(rngMethods::Xor(seed, cellIdx), rngDistributions::Uniform_float());
+                rng = nvrng::create(rngMethods::Xor(seed, linearLocalCellIdx), rngDistributions::Uniform_float());
                 isInitialized = true;
             }
         }
@@ -139,7 +141,6 @@ namespace ionization
             PMACC_ALIGN(isInitialized, bool);
             PMACC_ALIGN(seed, uint32_t);
             PMACC_ALIGN(localCells, DataSpace<simDim>);
-            PMACC_ALIGN(totalGpuOffset, DataSpace<simDim>);
     };
 
 } // namespace ionization
