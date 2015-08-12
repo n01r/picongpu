@@ -29,7 +29,7 @@ namespace picongpu
     {
     public:
         /* Add this additional field for pushing particles */
-        static const bool InfluenceParticlePusher = false;
+        static const bool InfluenceParticlePusher = true;
 
         /* We use this to calculate your SI input back to our unit system */
         const float3_64 unitField;
@@ -68,7 +68,7 @@ namespace picongpu
         operator()( const DataSpace<simDim>& cellIdx,
                     const uint32_t currentStep ) const
         {
-            /* no B field */
+            return float3_X(0.0, 0.0, 0.0);
         }
     };
 
