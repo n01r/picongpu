@@ -106,12 +106,17 @@ namespace ionization
             mpi::SeedPerRank<simDim> seedPerRank;
             /* creates global seed that is unique for each MPI rank (GPU) and the particle species */
             seed = seedPerRank(GlobalSeed()(), PMacc::traits::GetUniqueTypeId<FrameType, uint32_t>::uid());
+            seed=seed<<16;
+            uint32_t seed_before = seed;
             /* XOR operations to make seed unique for ionization process and for this time step */
             seed ^= IONIZATION_SEED ^ currentStep;
 
             const SubGrid<simDim>& subGrid = Environment<simDim>::get().SubGrid();
             /* size of the local domain on the designated GPU in units of cells */
             localCells = subGrid.getLocalDomain().size;
+
+            DataSpace<simDim> totalGpuOffset = subGrid.getLocalDomain( ).offset;
+            printf("Seed 1: %u, Seed 2: %u , Time step: %u, Offset: %u %u %u\n", seed_before, seed, currentStep, totalGpuOffset.x(), totalGpuOffset.y(), totalGpuOffset.z());
         }
 
         DINLINE void init(const DataSpace<simDim>& localCellIdx)
