@@ -21,3 +21,74 @@
 #pragma once
 
 #include "particles/ionization/byField/fieldIonizationCalc.def"
+
+namespace picongpu
+{
+    /** Quantum numbers for atomic shells
+     *
+     * These following vectors contain the atomic quantum numbers n, l, m_l
+     * in the order predicted by the Madelung energy ordering rule of the
+     * Aufbau principle.
+     *
+     * When taking these into account for ionization of complex atoms and ions
+     * one neglects possible hybridization and also assumes that electrons with
+     * higher |m_l| get ionized earlier. This last assumption follows from the
+     *
+     * Usage:  If your ionization model uses quantum numbers, use the attribute
+     *         boundElectrons, cast to an integer value and use it as an index
+     *         for these vectors to get the quantum numbers of the respective
+     *         electron.
+     */
+
+    /* principal quantum number */
+    PMACC_CONST_VECTOR(float_X,30,QUANTUM_NUMBER_N,
+            /* 1s */
+            1., 1.,
+            /* 2s */
+            2., 2.,
+            /* 2p */
+            2., 2., 2., 2., 2., 2.,
+            /* 3s */
+            3., 3.,
+            /* 3p */
+            3., 3., 3., 3., 3., 3.,
+            /* 4s */
+            4., 4.,
+            /* 3d */
+            3., 3., 3., 3., 3., 3., 3., 3., 3., 3.,
+            );
+    /* azimuthal quantum number */
+    PMACC_CONST_VECTOR(float_X,30,QUANTUM_NUMBER_L,
+            /* 1s */
+            0., 0.,
+            /* 2s */
+            0., 0.,
+            /* 2p */
+            1., 1., 1., 1., 1., 1.,
+            /* 3s */
+            0., 0.,
+            /* 3p */
+            1., 1., 1., 1., 1., 1.,
+            /* 4s */
+            0., 0.,
+            /* 3d */
+            2., 2., 2., 2., 2., 2., 2., 2., 2., 2.,
+            );
+    /* magnetic quantum number */
+    PMACC_CONST_VECTOR(float_X,30,QUANTUM_NUMBER_M_L,
+            /* 1s */
+            0., 0.,
+            /* 2s */
+            0., 0.,
+            /* 2p */
+            0., 0., -1., -1., 1., 1.,
+            /* 3s */
+            0., 0.,
+            /* 3p */
+            0., 0., -1., -1., 1., 1.,
+            /* 4s */
+            0., 0.,
+            /* 3d */
+            0., 0., -1., -1., 1., 1., -2., -2., 2., 2.,
+            );
+}
