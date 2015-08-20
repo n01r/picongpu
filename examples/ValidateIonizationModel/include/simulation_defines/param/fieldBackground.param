@@ -1,0 +1,143 @@
+/**
+ * Copyright 2014-2015 Axel Huebl, Alexander Debus, Marco Garten
+ *
+ * This file is part of PIConGPU.
+ *
+ * PIConGPU is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * PIConGPU is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with PIConGPU.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+
+/** Load external background fields
+ *
+ */
+namespace picongpu
+{
+    class FieldBackgroundE
+    {
+    public:
+        /* Add this additional field for pushing particles */
+        #if(PARAM_TESTCASE > 0 && PARAM_TESTCASE <= 3)
+        static const bool InfluenceParticlePusher = true;
+        #else
+        static const bool InfluenceParticlePusher = false;
+        #endif
+
+        /* We use this to calculate your SI input back to our unit system */
+        const float3_64 unitField;
+        HDINLINE FieldBackgroundE( const float3_64 unitField ) : unitField(unitField)
+        {}
+
+        /** Specify your background field E(r,t) here
+         *
+         * \param cellIdx The total cell id counted from the start at t = 0
+         * \param currentStep The current time step */
+        HDINLINE float3_X
+        operator()( const DataSpace<simDim>& cellIdx,
+                    const uint32_t currentStep ) const
+        {
+
+            /* Test case 1 : "Static, Homogenous Field" */
+            #if(PARAM_TESTCASE == 1)
+            /* constant electric field over the whole simulation volume in z-direction */
+            return float3_X(0.0, 0.0, 5.14e11 / unitField[2]);
+
+            /* Test case 2 : "Homogenous, Growing Field" */
+            #elif(PARAM_TESTCASE == 2)
+            /* constant electric field over the whole simulation volume in z-direction */
+            return float3_X(0.0, 0.0, 0.1 * currentStep * 5.14e11 / unitField[2]);
+
+            /* Test case 3 : "Spatial Gaussian" */
+            #elif(PARAM_TESTCASE == 3)
+            /* spatial Gaussian shaped electric field */
+            const float_64 maxAmpPerTime = float_64(1.0e10) * float_64(currentStep);
+            /* coordinates in microns */
+            const float_64 xCoordSI = float_64(cellIdx.x()) * SI::CELL_WIDTH_SI  * float_64(1.0e6);
+            const float_64 yCoordSI = float_64(cellIdx.y()) * SI::CELL_HEIGHT_SI * float_64(1.0e6);
+            /* center of the Gaussian in microns */
+            const float_64 xCenterSI = float_64(45.0);
+            const float_64 yCenterSI = float_64(45.0);
+            /* electric field in SI units */
+            float_64 gaussianFieldSI = maxAmpPerTime * math::exp(
+                                                        - float_64(5.0e-2)*(
+                                                          math::pow((xCoordSI - xCenterSI),float_64(2.))
+                                                        + math::pow((yCoordSI - yCenterSI),float_64(2.))
+                                                        )
+                );
+            float_X result = float_X(gaussianFieldSI / unitField[2]);
+            return float3_X(0.0, 0.0, result);
+
+            #else
+            return float3_X(0.0, 0.0, 0.0);
+            #endif
+        }
+    };
+
+    class FieldBackgroundB
+    {
+    public:
+        /* Add this additional field for pushing particles */
+        static const bool InfluenceParticlePusher = false;
+
+        /* We use this to calculate your SI input back to our unit system */
+        const float3_64 unitField;
+        HDINLINE FieldBackgroundB( const float3_64 unitField ) : unitField(unitField)
+        {}
+
+        /** Specify your background field B(r,t) here
+         *
+         * \param cellIdx The total cell id counted from the start at t=0
+         * \param currentStep The current time step */
+        HDINLINE float3_X
+        operator()( const DataSpace<simDim>& cellIdx,
+                    const uint32_t currentStep ) const
+        {
+            return float3_X(0.0, 0.0, 0.0);
+        }
+    };
+
+    class FieldBackgroundJ
+    {
+    public:
+        /* Add this additional field? */
+        static const bool activated = false;
+
+        /* We use this to calculate your SI input back to our unit system */
+        const float3_64 unitField;
+        HDINLINE FieldBackgroundJ( const float3_64 unitField ) : unitField(unitField)
+        {}
+
+        /** Specify your background field J(r,t) here
+         *
+         * \param cellIdx The total cell id counted from the start at t=0
+         * \param currentStep The current time step */
+        HDINLINE float3_X
+        operator()( const DataSpace<simDim>& cellIdx,
+                    const uint32_t currentStep ) const
+        {
+            /* example: periodicity of 20 microns ( = 2.0e-5 m) */
+            const float_64 period_SI(20.0e-6);
+            /* calculate cells -> SI -> m to microns*/
+            const float_64 y_SI = cellIdx.y() * SI::CELL_HEIGHT_SI * 1.0e6;
+            /* note: you can also transform the time step to seconds by
+             *       multiplying with DELTA_T_SI */
+
+            /* specify your J-Field in A/m^2 and convert to PIConGPU units */
+            const float_X sinArg = precisionCast<float_X>( y_SI / period_SI * 2.0 * PI );
+            return float3_X(0.0, math::cos( sinArg ) / unitField[1], 0.0);
+        }
+    };
+
+} // namespace picongpu

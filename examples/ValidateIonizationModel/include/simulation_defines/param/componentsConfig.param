@@ -1,0 +1,110 @@
+/**
+ * Copyright 2013-2015 Axel Huebl, Anton Helm, Rene Widera, Felix Schmitt,
+ *                     Richard Pausch, Marco Garten
+ *
+ * This file is part of PIConGPU.
+ *
+ * PIConGPU is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * PIConGPU is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with PIConGPU.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
+#pragma once
+
+
+namespace picongpu
+{
+/*! Simulation Starter ---------------------------------------------------------
+ *  - defaultPIConGPU         : default PIConGPU configuration
+ */
+namespace simulation_starter = defaultPIConGPU;
+
+/*! Laser Configuration --------------------------------------------------------
+ *  - laserNone             : no laser init
+ *  - laserGaussianBeam     : Gaussian beam (focusing)
+ *  - laserPulseFrontTilt   : Gaussian beam with a tilted pulse envelope
+ *                            in 'x' direction
+ *  - laserWavepacket       : wavepacket (Gaussian in time and space, not focusing)
+ *  - laserPlaneWave        : a plane wave
+ *  - laserPolynom          : a polynomial laser envelope
+ */
+namespace laserProfile = laserNone;
+
+/*! Field Configuration --------------------------------------------------------
+ *  - fieldSolverYee : standard Yee solver
+ *  - fieldSolverLehe: Num. Cherenkov free field solver in a chosen direction
+ *  - fieldSolverDirSplitting: Sentoku's Directional Splitting Method
+ *  - fieldSolverNone: disable the vacuum update of E and B
+ *
+ ** For development purposes: --------------------------------------------------
+ *  - fieldSolverYeeNative : generic version of fieldSolverYee
+ *    (need more shared memory per GPU and is slow)
+ */
+#ifndef PARAM_FIELDSOLVER
+#define PARAM_FIELDSOLVER fieldSolverYee
+#endif
+namespace fieldSolver = PARAM_FIELDSOLVER;
+
+/*enable (1) or disable (0) current calculation*/
+#ifndef ENABLE_CURRENT
+#define ENABLE_CURRENT 0
+#endif
+
+/*! Ionization Model Test Case Configuration -----------------------------------
+ *
+ * The following test cases have been designed to validate the implementation
+ * of ionization models in PIConGPU. The tests begin in a quite unphysical
+ * manner, keeping most of the parameters fixed. They become more and more
+ * complex making it thus possible to see the influence of single parameters on
+ * the reproduction of theoretical results until one arrives at a physical
+ * setup.
+ *
+ * Test case 0 : "Dry-run"
+ *
+ *              - LWFA example with default parameters
+ *              - no current will be calculated
+ *              - ionization is "active" but the model does nothing
+ *
+ * Test case 1 : "Homogenous, Static Field"
+ *
+ *              - no particle pusher
+ *              - homogenous static E_z field
+ *
+ * Test case 2 : "Homogenous, Growing Field"
+ *
+ *              - no particle pusher
+ *              - homogenous E_z field growing linearly in time
+ *
+ * Test case 3 : "Spatial Gaussian"
+ *
+ *              - no particle pusher
+ *              - E_z field in Gaussian shape, growing linearly in time
+ *
+ * Test case 4 : "Plane Wave"
+ *
+ *              - Vay particle pusher
+ *              - Yee current solver
+ *              - plane wave laser
+ *
+ * Test case 5 : "LWFA"
+ *
+ *               - Vay particle pusher
+ *               - Yee current solver
+ *               - Gaussian shaped laser pulse
+ */
+#ifndef PARAM_TESTCASE
+#define PARAM_TESTCASE 0
+#endif
+
+}
