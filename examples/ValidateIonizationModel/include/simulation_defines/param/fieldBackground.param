@@ -52,12 +52,15 @@ namespace picongpu
             /* Test case 1 : "Static, Homogenous Field" */
             #if(PARAM_TESTCASE == 1)
             /* constant electric field over the whole simulation volume in z-direction */
-            return float3_X(0.0, 0.0, 5.14e11 / unitField[2]);
+            float_X result = float_X(SI::ATOMIC_UNIT_EFIELD / unitField[2]);
+            return float3_X(0.0, 0.0, result);
 
             /* Test case 2 : "Homogenous, Growing Field" */
             #elif(PARAM_TESTCASE == 2)
-            /* constant electric field over the whole simulation volume in z-direction */
-            return float3_X(0.0, 0.0, 0.1 * currentStep * 5.14e11 / unitField[2]);
+            /* linearly growing electric field over the whole simulation volume in z-direction */
+            float_64 growingField = float_64(0.1) * float_64(currentStep) * float_64(5.14e11) / unitField[2];
+            float_X result = float_X(growingField);
+            return float3_X(0.0, 0.0, result);
 
             /* Test case 3 : "Spatial Gaussian" */
             #elif(PARAM_TESTCASE == 3)

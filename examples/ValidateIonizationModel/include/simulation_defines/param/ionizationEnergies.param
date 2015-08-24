@@ -67,7 +67,12 @@ namespace AU
      * @see http://physics.nist.gov/PhysRefData/ASD/ionEnergy.html
      */
 
-    /* ionization energies for neon unpertubed states in atomic units */
+    /* ionization energies of unpertubed states in atomic units : hydrogen */
+    PMACC_CONST_VECTOR(float_X,10,IONIZATION_ENERGY_HYDROGEN,
+            13.598434 / ATOMIC_UNIT_ENERGY_EV
+    );
+
+    /* ionization energies of unpertubed states in atomic units : neon */
     PMACC_CONST_VECTOR(float_X,10,IONIZATION_ENERGY_NEON,
             21.5645   / ATOMIC_UNIT_ENERGY_EV,
             40.9630   / ATOMIC_UNIT_ENERGY_EV,
