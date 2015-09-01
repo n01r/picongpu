@@ -30,37 +30,6 @@ namespace picongpu
  */
 namespace simulation_starter = defaultPIConGPU;
 
-/*! Laser Configuration --------------------------------------------------------
- *  - laserNone             : no laser init
- *  - laserGaussianBeam     : Gaussian beam (focusing)
- *  - laserPulseFrontTilt   : Gaussian beam with a tilted pulse envelope
- *                            in 'x' direction
- *  - laserWavepacket       : wavepacket (Gaussian in time and space, not focusing)
- *  - laserPlaneWave        : a plane wave
- *  - laserPolynom          : a polynomial laser envelope
- */
-namespace laserProfile = laserNone;
-
-/*! Field Configuration --------------------------------------------------------
- *  - fieldSolverYee : standard Yee solver
- *  - fieldSolverLehe: Num. Cherenkov free field solver in a chosen direction
- *  - fieldSolverDirSplitting: Sentoku's Directional Splitting Method
- *  - fieldSolverNone: disable the vacuum update of E and B
- *
- ** For development purposes: --------------------------------------------------
- *  - fieldSolverYeeNative : generic version of fieldSolverYee
- *    (need more shared memory per GPU and is slow)
- */
-#ifndef PARAM_FIELDSOLVER
-#define PARAM_FIELDSOLVER fieldSolverYee
-#endif
-namespace fieldSolver = PARAM_FIELDSOLVER;
-
-/*enable (1) or disable (0) current calculation*/
-#ifndef ENABLE_CURRENT
-#define ENABLE_CURRENT 0
-#endif
-
 /*! Ionization Model Test Case Configuration -----------------------------------
  *
  * The following test cases have been designed to validate the implementation
@@ -105,6 +74,37 @@ namespace fieldSolver = PARAM_FIELDSOLVER;
  */
 #ifndef PARAM_TESTCASE
 #define PARAM_TESTCASE 0
+#endif
+
+/*! Laser Configuration --------------------------------------------------------
+ *  - laserNone             : no laser init
+ *  - laserGaussianBeam     : Gaussian beam (focusing)
+ *  - laserPulseFrontTilt   : Gaussian beam with a tilted pulse envelope
+ *                            in 'x' direction
+ *  - laserWavepacket       : wavepacket (Gaussian in time and space, not focusing)
+ *  - laserPlaneWave        : a plane wave
+ *  - laserPolynom          : a polynomial laser envelope
+ */
+namespace laserProfile = laserNone;
+
+/*! Field Configuration --------------------------------------------------------
+ *  - fieldSolverYee : standard Yee solver
+ *  - fieldSolverLehe: Num. Cherenkov free field solver in a chosen direction
+ *  - fieldSolverDirSplitting: Sentoku's Directional Splitting Method
+ *  - fieldSolverNone: disable the vacuum update of E and B
+ *
+ ** For development purposes: --------------------------------------------------
+ *  - fieldSolverYeeNative : generic version of fieldSolverYee
+ *    (need more shared memory per GPU and is slow)
+ */
+#ifndef PARAM_FIELDSOLVER
+#define PARAM_FIELDSOLVER fieldSolverYee
+#endif
+namespace fieldSolver = PARAM_FIELDSOLVER;
+
+/*enable (1) or disable (0) current calculation*/
+#ifndef ENABLE_CURRENT
+#define ENABLE_CURRENT 0
 #endif
 
 }
