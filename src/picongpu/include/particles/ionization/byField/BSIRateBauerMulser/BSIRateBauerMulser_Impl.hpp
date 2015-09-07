@@ -29,14 +29,14 @@
 #include "fields/FieldB.hpp"
 #include "fields/FieldE.hpp"
 
-#include "particles/ionization/byField/BSIStarkShifted/BSIStarkShifted.def"
-#include "particles/ionization/byField/BSIStarkShifted/AlgorithmBSIStarkShifted.hpp"
+#include "particles/ionization/byField/BSIRateBauerMulser/BSIRateBauerMulser.def"
+#include "particles/ionization/byField/BSIRateBauerMulser/AlgorithmBSIRateBauerMulser.hpp"
 #include "particles/ionization/ionization.hpp"
 
 #include "compileTime/conversion/TypeToPointerPair.hpp"
 #include "memory/boxes/DataBox.hpp"
 
-#include "particles/ParticlesFunctors.hpp"
+#include "particles/ionization/ionizationMethods.hpp"
 
 namespace picongpu
 {
@@ -45,7 +45,7 @@ namespace particles
 namespace ionization
 {
 
-    /** \struct BSIStarkShifted_Impl
+    /** \struct BSIRateBauerMulser_Impl
      *
      * \brief Barrier Suppression Ionization - Implementation
      *
@@ -53,7 +53,7 @@ namespace ionization
      * \tparam T_SrcSpecies particle species that is ionized
      */
     template<typename T_DestSpecies, typename T_SrcSpecies>
-    struct BSIStarkShifted_Impl
+    struct BSIRateBauerMulser_Impl
     {
 
         typedef T_DestSpecies DestSpecies;
@@ -82,22 +82,27 @@ namespace ionization
         private:
 
             /* define ionization ALGORITHM (calculation) for ionization MODEL */
-            typedef particles::ionization::AlgorithmBSIStarkShifted IonizationAlgorithm;
+            typedef particles::ionization::AlgorithmBSIRateBauerMulser IonizationAlgorithm;
+
+            /* random number generator for Monte Carlo */
+            typedef particles::ionization::RandomNrForMonteCarlo<SrcSpecies> RandomGen;
+            /* \todo fix: cannot PMACC_ALIGN() because it seems to be too large */
+            RandomGen randomGen;
 
             typedef MappingDesc::SuperCellSize TVec;
 
             typedef FieldE::ValueType ValueType_E;
             typedef FieldB::ValueType ValueType_B;
             /* global memory EM-field device databoxes */
-            FieldE::DataBoxType eBox;
-            FieldB::DataBoxType bBox;
+            PMACC_ALIGN(eBox, FieldE::DataBoxType);
+            PMACC_ALIGN(bBox, FieldB::DataBoxType);
             /* shared memory EM-field device databoxes */
             PMACC_ALIGN(cachedE, DataBox<SharedBox<ValueType_E, typename BlockArea::FullSuperCellSize,1> >);
             PMACC_ALIGN(cachedB, DataBox<SharedBox<ValueType_B, typename BlockArea::FullSuperCellSize,0> >);
 
         public:
-            /* host constructor */
-            BSIStarkShifted_Impl(const uint32_t currentStep)
+            /* host constructor initializing member : random number generator */
+            BSIRateBauerMulser_Impl(const uint32_t currentStep) : randomGen(currentStep)
             {
                 DataConnector &dc = Environment<>::get().DataConnector();
                 /* initialize pointers on host-side E-(B-)field databoxes */
@@ -150,6 +155,10 @@ namespace ionization
                           cachedE,
                           fieldEBlock
                           );
+
+                /* initialize random number generator with the local cell index in the simulation*/
+                randomGen.init(localCellOffset);
+
                 /* wait for shared memory to be initialized */
                 __syncthreads();
             }
@@ -188,7 +197,7 @@ namespace ionization
                 IonizationAlgorithm ionizeAlgo;
                 ionizeAlgo(
                      bField, eField,
-                     particle
+                     particle, randomGen()
                      );
 
                 /* determine number of new macro electrons to be created */

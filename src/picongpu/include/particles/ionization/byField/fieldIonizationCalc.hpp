@@ -23,5 +23,5 @@
 #include "particles/ionization/byField/ADK/AlgorithmADK.hpp"
 #include "particles/ionization/byField/BSIHydrogenLike/AlgorithmBSIHydrogenLike.hpp"
 #include "particles/ionization/byField/BSIEffectiveZ/AlgorithmBSIEffectiveZ.hpp"
-#include "particles/ionization/byField/BSIStarkShifted/AlgorithmBSIStarkShifted.hpp"
+#include "particles/ionization/byField/BSIRateBauerMulser/AlgorithmBSIRateBauerMulser.hpp"
 #include "particles/ionization/None/AlgorithmNone.hpp"

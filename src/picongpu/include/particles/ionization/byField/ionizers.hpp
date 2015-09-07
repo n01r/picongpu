@@ -30,5 +30,5 @@
 #include "particles/ionization/byField/ADK/ADK_Impl.hpp"
 #include "particles/ionization/byField/BSIHydrogenLike/BSIHydrogenLike_Impl.hpp"
 #include "particles/ionization/byField/BSIEffectiveZ/BSIEffectiveZ_Impl.hpp"
-#include "particles/ionization/byField/BSIStarkShifted/BSIStarkShifted_Impl.hpp"
+#include "particles/ionization/byField/BSIRateBauerMulser/BSIRateBauerMulser_Impl.hpp"
 #include "particles/ionization/None/None_Impl.hpp"

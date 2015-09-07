@@ -43,7 +43,7 @@ namespace ionization
 
     struct AlgorithmBSIEffectiveZ;
 
-    struct AlgorithmBSIStarkShifted;
+    struct AlgorithmBSIRateBauerMulser;
 
 } // namespace ionization
 

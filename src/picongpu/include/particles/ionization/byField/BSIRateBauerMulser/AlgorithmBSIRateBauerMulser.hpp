@@ -26,10 +26,11 @@
 #include "particles/traits/GetAtomicNumbers.hpp"
 #include "traits/attribute/GetChargeState.hpp"
 #include "algorithms/math/floatMath/floatingPoint.tpp"
+#include "particles/ionization/utilities.hpp"
 
-/** \file AlgorithmBSIStarkShifted.hpp
+/** \file AlgorithmBSIRateBauerMulser.hpp
  *
- * IONIZATION ALGORITHM for the BSIStarkShifted model
+ * IONIZATION ALGORITHM for the BSIRateBauerMulser model
  *
  * - implements the calculation of ionization probability and changes charge states
  *   by decreasing the number of bound electrons
@@ -43,11 +44,11 @@ namespace particles
 namespace ionization
 {
 
-    /** \struct AlgorithmBSIStarkShifted
+    /** \struct AlgorithmBSIRateBauerMulser
      *
      * \brief calculation for the Barrier Suppression Ionization model
      */
-    struct AlgorithmBSIStarkShifted
+    struct AlgorithmBSIRateBauerMulser
     {
 
         /** Functor implementation
@@ -62,7 +63,7 @@ namespace ionization
          */
         template<typename EType, typename BType, typename ParticleType >
         HDINLINE void
-        operator()( const BType bField, const EType eField, ParticleType& parentIon )
+        operator()( const BType bField, const EType eField, ParticleType& parentIon, float_X randNr )
         {
 
             const float_X protonNumber  = GetAtomicNumbers<ParticleType>::type::numberOfProtons;
@@ -72,9 +73,27 @@ namespace ionization
             const float_X iEnergy       = GetIonizationEnergies<ParticleType>::type()[cs];
             /* critical field strength in atomic units */
             float_X critField           = (math::sqrt(float_X(2.))-float_X(1.)) * math::pow(iEnergy,float_X(3./2.));
+            /* electric field at this moment in atomic units */
+            float_X eFieldAU            = math::abs(eField) / ATOMIC_UNIT_EFIELD;
+
+            /* ionization rate */
+            float_X rateBSI             = float_X(2.4)/math::pow(protonNumber,float_X(4.)) * util::square(eFieldAU);
+
+            /* simulation time step in atomic units */
+            const float_X timeStepAU = float_X(DELTA_T / ATOMIC_UNIT_TIME);
+            /* ionization probability
+             *
+             * probability = rate * time step
+             * --> for infinitesimal time steps
+             *
+             * the whole ensemble should then follow
+             * P = 1 - exp(-rate * time step) if the laser wavelength is
+             * sampled well enough
+             */
+            float_X probBSI     = rateBSI * timeStepAU;
 
             /* ionization condition */
-            if (math::abs(eField) / ATOMIC_UNIT_EFIELD >= critField && chargeState < protonNumber)
+            if (eFieldAU >= critField && chargeState < protonNumber && randNr < probBSI)
             {
                 /* set new particle charge state */
                 parentIon[boundElectrons_] -= float_X(1.0);
