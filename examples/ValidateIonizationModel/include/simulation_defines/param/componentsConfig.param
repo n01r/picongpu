@@ -98,7 +98,11 @@ namespace laserProfile = laserNone;
  *    (need more shared memory per GPU and is slow)
  */
 #ifndef PARAM_FIELDSOLVER
-#define PARAM_FIELDSOLVER fieldSolverYee
+#if(PARAM_TESTCASE <= 3)
+    #define PARAM_FIELDSOLVER fieldSolverNone
+#else
+    #define PARAM_FIELDSOLVER fieldSolverYee
+#endif
 #endif
 namespace fieldSolver = PARAM_FIELDSOLVER;
 
