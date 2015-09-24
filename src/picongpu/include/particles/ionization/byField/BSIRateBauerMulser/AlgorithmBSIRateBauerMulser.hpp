@@ -90,7 +90,11 @@ namespace ionization
              * P = 1 - exp(-rate * time step) if the laser wavelength is
              * sampled well enough
              */
-            float_X probBSI     = rateBSI * timeStepAU;
+            #if(PARAM_IONIZATION_PROBABILITY == 0)
+                float_X probBSI     = rateBSI * timeStepAU;
+            #elif(PARAM_IONIZATION_PROBABILITY == 1)
+                float_X probBSI     = float_X(1.) - math::exp(-rateBSI * timeStepAU);
+            #endif
 
             /* ionization condition */
             if (eFieldAU >= critField && chargeState < protonNumber && randNr < probBSI)

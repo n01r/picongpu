@@ -66,6 +66,7 @@ namespace ionization
             const float_X protonNumber  = GetAtomicNumbers<ParticleType>::type::numberOfProtons;
             float_X chargeState         = attribute::getChargeState(parentIon);
             uint32_t cs                 = math::float2int_rd(chargeState);
+            /* ionization potential in atomic units */
             const float_X iEnergy       = GetIonizationEnergies<ParticleType>::type()[cs];
 
             const float_X pi    = precisionCast<float_X>(M_PI);
@@ -94,8 +95,11 @@ namespace ionization
              * P = 1 - exp(-rate * time step) if the laser wavelength is
              * sampled well enough
              */
-            float_X probADK     = rateADK * timeStepAU;
-
+            #if(PARAM_IONIZATION_PROBABILITY == 0)
+                float_X probADK     = rateADK * timeStepAU;
+            #elif(PARAM_IONIZATION_PROBABILITY == 1)
+                float_X probADK     = float_X(1.) - math::exp(-rateADK * timeStepAU);
+            #endif
             /* ionization condition */
             if (randNr < probADK && chargeState < protonNumber)
             {

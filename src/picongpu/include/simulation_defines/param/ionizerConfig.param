@@ -37,4 +37,13 @@ namespace picongpu
         /* 1s */
         1.
         );
+
+    /** Method of calculating the ionization probability
+     *
+     * 0 : linearly      with P = Rate * timestep
+     * 1 : exponentially with P = 1 - exp(- Rate * timestep)
+     */
+    #ifndef PARAM_IONIZATION_PROBABILITY
+    #define PARAM_IONIZATION_PROBABILITY 0
+    #endif
 }
