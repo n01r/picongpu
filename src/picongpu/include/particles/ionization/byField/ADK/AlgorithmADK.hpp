@@ -94,8 +94,11 @@ namespace ionization
              * P = 1 - exp(-rate * time step) if the laser wavelength is
              * sampled well enough
              */
-            float_X probADK     = rateADK * timeStepAU;
-
+            #if(PARAM_IONIZATION_PROBABILITY == 0)
+                float_X probADK     = rateADK * timeStepAU;
+            #elif(PARAM_IONIZATION_PROBABILITY == 1)
+                float_X probADK     = float_X(1.) - math::exp(-rateADK * timeStepAU);
+            #endif
             /* ionization condition */
             if (randNr < probADK && chargeState < protonNumber)
             {
