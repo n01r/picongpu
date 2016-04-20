@@ -82,7 +82,7 @@ namespace ionization
         private:
 
             /* define ionization ALGORITHM (calculation) for ionization MODEL */
-            typedef particles::ionization::AlgorithmBSI IonizationAlgorithm;
+            typedef particles::ionization::AlgorithmThomasFermi IonizationAlgorithm;
 
             typedef MappingDesc::SuperCellSize TVec;
 
@@ -97,7 +97,7 @@ namespace ionization
 
         public:
             /* host constructor */
-            BSI_Impl(const uint32_t currentStep)
+            ThomasFermi_Impl(const uint32_t currentStep)
             {
                 DataConnector &dc = Environment<>::get().DataConnector();
                 /* initialize pointers on host-side E-(B-)field databoxes */
