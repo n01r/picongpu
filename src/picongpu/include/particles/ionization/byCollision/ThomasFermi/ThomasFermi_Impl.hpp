@@ -26,8 +26,7 @@
 #include "traits/Resolve.hpp"
 #include "mappings/kernel/AreaMapping.hpp"
 
-#include "fields/FieldB.hpp"
-#include "fields/FieldE.hpp"
+#include "fields/FieldTmp.hpp"
 
 #include "particles/ionization/byCollision/ThomasFermi/ThomasFermi.def"
 #include "particles/ionization/byCollision/ThomasFermi/AlgorithmThomasFermi.hpp"
@@ -86,26 +85,27 @@ namespace ionization
 
             typedef MappingDesc::SuperCellSize TVec;
 
-            typedef FieldE::ValueType ValueType_E;
-            typedef FieldB::ValueType ValueType_B;
-            /* global memory EM-field device databoxes */
-            FieldE::DataBoxType eBox;
-            FieldB::DataBoxType bBox;
-            /* shared memory EM-field device databoxes */
-            PMACC_ALIGN(cachedE, DataBox<SharedBox<ValueType_E, typename BlockArea::FullSuperCellSize,1> >);
-            PMACC_ALIGN(cachedB, DataBox<SharedBox<ValueType_B, typename BlockArea::FullSuperCellSize,0> >);
+            /* "temperature" value type */
+            typedef FieldTmp::ValueType ValueType_T;
+            /* global memory "temperature"-field device databox */
+            FieldTmp::DataBoxType temperatureBox;
+
+            /* shared memory "temperature"-field device databox */
+            PMACC_ALIGN(cachedT, DataBox<SharedBox<ValueType_T, typename BlockArea::FullSuperCellSize,0> >);
 
         public:
             /* host constructor */
             ThomasFermi_Impl(const uint32_t currentStep)
             {
                 DataConnector &dc = Environment<>::get().DataConnector();
-                /* initialize pointers on host-side E-(B-)field databoxes */
-                FieldE* fieldE = &(dc.getData<FieldE > (FieldE::getName(), true));
-                FieldB* fieldB = &(dc.getData<FieldB > (FieldB::getName(), true));
-                /* initialize device-side E-(B-)field databoxes */
-                eBox = fieldE->getDeviceDataBox();
-                bBox = fieldB->getDeviceDataBox();
+                /* initialize pointers on host-side "temperature"-field databox */
+                FieldTmp* fieldTmp = &(dc.getData<FieldTmp > (FieldTmp::getName(), true));
+                /* initialize device-side "temperature"-field databox */
+                temperatureBox = fieldTmp->getDeviceDataBox();
+
+                AbbbEhoiwehfoiwhefilhnalihförngösdfngsöldfnbsöjdfbnadkfnasködfbnskdfbnskdf.bnsd.kbnsdk.gbnsk.dgbnskd.gbn
+                jdsfnvjsdhnfuiovgahruglhfuivhalfiuvnaifnviafnviefhnvaihvnafhnvafnva
+                Hier weitermachen!
 
             }
 
