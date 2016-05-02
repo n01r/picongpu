@@ -23,16 +23,46 @@
 #pragma once
 
 #include "plugins/ILightweightPlugin.hpp"
+#include "dataManagement/DataConnector.hpp"
+#include "fields/FieldTmp.hpp"
 
 namespace picongpu
 {
 using namespace PMacc;
+
+namespace detail
+{
+    // functor for all species to calculate density
+    template<typename T_SpeciesName, typename T_Area>
+    struct ComputeAverageBulkEnergy
+    {
+        typedef typename T_SpeciesName::type SpeciesName;
+        static const uint32_t area = T_Area::value;
+
+        HINLINE void operator()( FieldTmp* fieldTmp,
+                                 const uint32_t currentStep) const
+        {
+            DataConnector &dc = Environment<>::get().DataConnector();
+
+            /* load species without copying the particle data to the host */
+            SpeciesName* speciesTmp = &(dc.getData<SpeciesName >(SpeciesName::FrameType::getName(), true));
+
+            /* run algorithm */
+            typedef typename CreateEnergyOperation<SpeciesName>::type::Solver EnergySolver;
+            fieldTmp->computeValue < area, EnergySolver > (*speciesTmp, currentStep);
+            dc.releaseData(SpeciesName::FrameType::getName());
+        }
+    };
+} // namespace detail
 
 template<class T_SpeciesType>
 class AverageBulkEnergy : public ISimulationPlugin
 {
     private:
         typedef T_SpeciesType SpeciesType;
+
+        /* only rank 0 creates a file */
+        bool writeToFile;
 
     public:
         AverageBulkEnergy()
@@ -46,10 +76,26 @@ class AverageBulkEnergy : public ISimulationPlugin
             return "AverageBulkEnergy";
         }
 
+        /* notification callback for simulation step currentStep
+         * called every notifyPeriod steps */
         void notify(uint32_t currentStep)
         {
-            /* notification callback for simulation step currentStep
-             * called every notifyPeriod steps */
+            typedef SuperCellSize BlockDim;
+
+            DataConnector &dc = Environment<>::get().DataConnector();
+
+            /* load FieldTmp without copy data to host */
+            FieldTmp* fieldTmp = &(dc.getData<FieldTmp > (FieldTmp::getName(), true));
+            /* reset density values to zero */
+            fieldTmp->getGridBuffer().getDeviceBuffer().setValue(FieldTmp::ValueType(0.0));
+
+            /* calculate the particle energies for all particles */
+            ForEach<VectorAllSpecies, picongpu::detail::ComputeAverageBulkEnergy<bmpl::_1,bmpl::int_<CORE + BORDER> >, MakeIdentifier<bmpl::_1> > computeAverageBulkEnergy;
+            computeAverageBulkEnergy(forward(fieldTmp), currentStep);
+
+            /* add results of all species that are still in GUARD to next GPUs BORDER */
+            EventTask fieldTmpEvent = fieldTmp->asyncCommunication(__getTransactionEvent());
+            __setTransactionEvent(fieldTmpEvent);
             std::cout << "Hello World!" << std::endl;
 
         }
