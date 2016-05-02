@@ -37,6 +37,7 @@
 #include "plugins/ChargeConservation.hpp"
 #if(ENABLE_HDF5 == 1)
 #include "plugins/PhaseSpace/PhaseSpaceMulti.hpp"
+#include "plugins/AverageBulkEnergy.hpp"
 #endif
 
 #if (ENABLE_INSITU_VOLVIS == 1)
@@ -175,6 +176,7 @@ private:
 #if(ENABLE_HDF5 == 1)
       , PerSuperCell<bmpl::_1>
       , PhaseSpaceMulti<particles::shapes::Counter::ChargeAssignment, bmpl::_1>
+      , AverageBulkEnergy<bmpl::_1>
 #endif
     > UnspecializedSpeciesPlugins;
 
