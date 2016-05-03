@@ -61,11 +61,15 @@ class AverageBulkEnergy : public ISimulationPlugin
     private:
         typedef T_SpeciesType SpeciesType;
 
-        /* only rank 0 creates a file */
-        bool writeToFile;
+        /* species prefix for the file name */
+        std::string prefix;
+        /* name of the output file */
+        const std::string filename;
+        /* output file stream */
+        std::ofstream output_file;
 
     public:
-        AverageBulkEnergy()
+        AverageBulkEnergy() : prefix("avgBulkEnergy"), filename("avgBulkEnergy.dat")
         {
             /* register our plugin during creation */
             Environment<>::get().PluginConnector().registerPlugin(this);
@@ -84,9 +88,9 @@ class AverageBulkEnergy : public ISimulationPlugin
 
             DataConnector &dc = Environment<>::get().DataConnector();
 
-            /* load FieldTmp without copy data to host */
+            /* load FieldTmp without copying data to host */
             FieldTmp* fieldTmp = &(dc.getData<FieldTmp > (FieldTmp::getName(), true));
-            /* reset density values to zero */
+            /* reset field values to zero */
             fieldTmp->getGridBuffer().getDeviceBuffer().setValue(FieldTmp::ValueType(0.0));
 
             /* calculate the particle energies for all particles */
@@ -96,7 +100,9 @@ class AverageBulkEnergy : public ISimulationPlugin
             /* add results of all species that are still in GUARD to next GPUs BORDER */
             EventTask fieldTmpEvent = fieldTmp->asyncCommunication(__getTransactionEvent());
             __setTransactionEvent(fieldTmpEvent);
-            std::cout << "Hello World!" << std::endl;
+
+            /* write data into output file */
+            this->output_file << currentStep << " " << *fieldTmp << " " << std::endl;
 
         }
 
@@ -118,10 +124,14 @@ class AverageBulkEnergy : public ISimulationPlugin
              * will be called only once per simulation and before notify() */
         }
 
-        void checkpoint(uint32_t currentStep, const std::string restartDirectory)
-        {
         /* create a persistent checkpoint here
          * will be called before notify() if both will be called for the same timestep */
+        void checkpoint(uint32_t currentStep, const std::string restartDirectory)
+        {
+            checkpointTxtFile( this->output_file,
+                       this->filename,
+                       currentStep,
+                       checkpointDirectory );
         }
 
     private:
@@ -132,6 +142,10 @@ class AverageBulkEnergy : public ISimulationPlugin
             /* called when plugin is loaded, command line flags are available here
              * set notification period for our plugin at the PluginConnector */
             Environment<>::get().PluginConnector().setNotificationPeriod(this, notifyPeriod);
+
+
+            this->output_file.open(this->filename.c_str(), std::ios_base::app);
+            this->output_file << "#timestep energy unit[J]" << std::endl;
         }
 
         void pluginUnload()
