@@ -62,7 +62,7 @@ Particles<T_ParticleDescription>::Particles( GridLayout<simDim> gridLayout,
                                              MappingDesc cellDescription,
                                              SimulationDataId datasetID ) :
 ParticlesBase<T_ParticleDescription, MappingDesc>( cellDescription ),
-fieldB( NULL ), fieldE( NULL ), fieldJcurrent( NULL ), fieldTmp( NULL ), m_gridLayout(gridLayout),
+fieldB( NULL ), fieldE( NULL ), fieldJcurrent( NULL ), fieldTmp( NULL ), counterBuffer( NULL ), m_gridLayout(gridLayout),
 m_datasetID( datasetID )
 {
     size_t sizeOfExchanges = 2 * 2 * ( BYTES_EXCHANGE_X + BYTES_EXCHANGE_Y + BYTES_EXCHANGE_Z ) + BYTES_EXCHANGE_X * 2 * 8;
@@ -141,12 +141,13 @@ void Particles<T_ParticleDescription>::syncToDevice( )
 }
 
 template<typename T_ParticleDescription>
-void Particles<T_ParticleDescription>::init( FieldE &fieldE, FieldB &fieldB, FieldJ &fieldJ, FieldTmp &fieldTmp )
+void Particles<T_ParticleDescription>::init( FieldE &fieldE, FieldB &fieldB, FieldJ &fieldJ, FieldTmp &fieldTmp, FieldTmp &counterBuffer )
 {
     this->fieldE = &fieldE;
     this->fieldB = &fieldB;
     this->fieldJcurrent = &fieldJ;
     this->fieldTmp = &fieldTmp;
+    this->counterBuffer = &counterBuffer;
 
     Environment<>::get( ).DataConnector( ).registerData( *this );
 }

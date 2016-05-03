@@ -23,6 +23,10 @@
 
 #pragma once
 
+#include "particles/particleToGrid/derivedAttributes/AverageBulkEnergy.def"
+
+#include "simulation_defines.hpp"
+
 
 
 namespace picongpu
@@ -41,6 +45,7 @@ struct ComputeAverageBulkEnergy
     static const uint32_t area = T_Area::value;
 
     HINLINE void operator()( FieldTmp* fieldTmp,
+                             FieldTmp* counterBuffer,
                              const uint32_t currentStep) const
     {
         DataConnector &dc = Environment<>::get().DataConnector();
@@ -51,6 +56,17 @@ struct ComputeAverageBulkEnergy
         /* run algorithm */
         typedef typename particleToGrid::CreateAveragedEnergyOperation<SpeciesName>::type::Solver AverageBulkEnergySolver;
         fieldTmp->computeValue < area, AverageBulkEnergySolver > (*speciesTmp, currentStep);
+
+
+
+
+        Hier weiter!
+        jehfiluheuöahguöahrgöharghaörghaörggABlärhx!
+
+
+
+        
+
         dc.releaseData(SpeciesName::FrameType::getName());
     }
 };

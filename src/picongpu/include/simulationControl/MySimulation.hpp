@@ -92,6 +92,7 @@ public:
     fieldE(NULL),
     fieldJ(NULL),
     fieldTmp(NULL),
+    counterBuffer(NULL),
     mallocMCBuffer(NULL),
     myFieldSolver(NULL),
     myCurrentInterpolation(NULL),
@@ -246,6 +247,8 @@ public:
 
         __delete(fieldTmp);
 
+        __delete(counterBuffer);
+
         __delete(mallocMCBuffer);
 
         __delete(myFieldSolver);
@@ -274,6 +277,7 @@ public:
         fieldE = new FieldE(*cellDescription);
         fieldJ = new FieldJ(*cellDescription);
         fieldTmp = new FieldTmp(*cellDescription);
+        counterBuffer = new FieldTmp(*cellDescription);
         pushBGField = new cellwiseOperation::CellwiseOperation < CORE + BORDER + GUARD > (*cellDescription);
         currentBGField = new cellwiseOperation::CellwiseOperation < CORE + BORDER + GUARD > (*cellDescription);
 
@@ -321,6 +325,7 @@ public:
         fieldE->init(*fieldB, *laser);
         fieldJ->init(*fieldE, *fieldB);
         fieldTmp->init();
+        counterBuffer->init();
 
         // create field solver
         this->myFieldSolver = new fieldSolver::FieldSolver(*cellDescription);
@@ -330,7 +335,7 @@ public:
 
 
         ForEach<VectorAllSpecies, particles::CallInit<bmpl::_1>, MakeIdentifier<bmpl::_1> > particleInit;
-        particleInit(forward(particleStorage), fieldE, fieldB, fieldJ, fieldTmp);
+        particleInit(forward(particleStorage), fieldE, fieldB, fieldJ, fieldTmp, counterBuffer);
 
 
         /* add CUDA streams to the StreamController for concurrent execution */
@@ -625,6 +630,9 @@ protected:
     FieldE *fieldE;
     FieldJ *fieldJ;
     FieldTmp *fieldTmp;
+    /* counter buffer for particle to grid averaging */
+    FieldTmp *counterBuffer;
+
     MallocMCBuffer *mallocMCBuffer;
 
     // field solver

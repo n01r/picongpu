@@ -71,10 +71,11 @@ public:
      */
     HINLINE std::string getName() const;
 
-    template<class FrameType, class TVecSuperCell, class BoxTmp >
+    template<class FrameType, class TVecSuperCell, class BoxTmpResult, class BoxTmpCounter>
     DINLINE void operator()(FrameType& frame, const int localIdx,
                             const TVecSuperCell superCell,
-                            BoxTmp& tmpBox);
+                            BoxTmpResult& tmpResultBox,
+                            BoxTmpCounter& tmpCounterBox);
 };
 
 /** Predefined Calculations for \see fieldOutput.param
@@ -87,7 +88,7 @@ struct CreateAveragedEnergyOperation
     typedef typename GetShape<T_Species>::type shapeType;
     typedef ComputeAverageGridValuePerFrame<
         shapeType,
-        particleToGrid::derivedAttributes::Energy
+        particleToGrid::derivedAttributes::AverageBulkEnergy
     > ParticleEnergy;
 
     typedef FieldTmpOperation< ParticleEnergy, T_Species > type;

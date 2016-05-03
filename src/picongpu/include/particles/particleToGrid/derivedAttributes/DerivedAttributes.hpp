@@ -26,3 +26,6 @@
 #include "particles/particleToGrid/derivedAttributes/EnergyDensity.hpp"
 #include "particles/particleToGrid/derivedAttributes/Energy.hpp"
 #include "particles/particleToGrid/derivedAttributes/LarmorPower.hpp"
+
+/* averaged attributes per cell */
+#include "particles/particleToGrid/derivedAttributes/AverageBulkEnergy.hpp"

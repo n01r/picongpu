@@ -26,7 +26,7 @@
 #include "pmacc_types.hpp"
 
 #include "math/Vector.hpp"
-#include "particles/particleToGrid/ComputeAverageGridValuePerFrame.def"
+#include "particles/particleToGrid/ComputeAveragedGridValuePerFrame.def"
 #include "particles/particleToGrid/derivedAttributes/DerivedAttributes.hpp"
 
 #include "algorithms/Gamma.hpp"
