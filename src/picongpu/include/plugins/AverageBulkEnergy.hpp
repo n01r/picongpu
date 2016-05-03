@@ -61,15 +61,8 @@ class AverageBulkEnergy : public ISimulationPlugin
     private:
         typedef T_SpeciesType SpeciesType;
 
-        /* species prefix for the file name */
-        std::string prefix;
-        /* name of the output file */
-        const std::string filename;
-        /* output file stream */
-        std::ofstream output_file;
-
     public:
-        AverageBulkEnergy() : prefix("avgBulkEnergy"), filename("avgBulkEnergy.dat")
+        AverageBulkEnergy()
         {
             /* register our plugin during creation */
             Environment<>::get().PluginConnector().registerPlugin(this);
@@ -101,9 +94,6 @@ class AverageBulkEnergy : public ISimulationPlugin
             EventTask fieldTmpEvent = fieldTmp->asyncCommunication(__getTransactionEvent());
             __setTransactionEvent(fieldTmpEvent);
 
-            /* write data into output file */
-            this->output_file << currentStep << " " << *fieldTmp << " " << std::endl;
-
         }
 
         void pluginRegisterHelp(po::options_description& desc)
@@ -128,10 +118,6 @@ class AverageBulkEnergy : public ISimulationPlugin
          * will be called before notify() if both will be called for the same timestep */
         void checkpoint(uint32_t currentStep, const std::string restartDirectory)
         {
-            checkpointTxtFile( this->output_file,
-                       this->filename,
-                       currentStep,
-                       checkpointDirectory );
         }
 
     private:
@@ -142,10 +128,6 @@ class AverageBulkEnergy : public ISimulationPlugin
             /* called when plugin is loaded, command line flags are available here
              * set notification period for our plugin at the PluginConnector */
             Environment<>::get().PluginConnector().setNotificationPeriod(this, notifyPeriod);
-
-
-            this->output_file.open(this->filename.c_str(), std::ios_base::app);
-            this->output_file << "#timestep energy unit[J]" << std::endl;
         }
 
         void pluginUnload()

@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2016 Axel Huebl, Rene Widera, Felix Schmitt, 
+ * Copyright 2013-2016 Axel Huebl, Rene Widera, Felix Schmitt,
  * Benjamin Worpitz, Richard Pausch
  *
  * This file is part of PIConGPU.
@@ -57,6 +57,12 @@ namespace picongpu
             CreateCounterOperation<bmpl::_1>
             >::type Counter_Seq;
 
+    /* Energy section */
+    typedef bmpl::transform<
+            VectorAllSpecies,
+            CreateEnergyOperation<bmpl::_1>
+            >::type Energy_Seq;
+
     /* EnergyDensity section */
     typedef bmpl::transform<
             VectorAllSpecies,
@@ -71,6 +77,7 @@ namespace picongpu
     typedef MakeSeq<
         Density_Seq,
         Counter_Seq,
+        Energy_Seq,
         EnergyDensity_Seq
     >::type FieldTmpSolvers;
 
