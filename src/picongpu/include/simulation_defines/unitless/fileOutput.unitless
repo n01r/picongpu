@@ -21,3 +21,4 @@
 #pragma once
 
 #include "particles/particleToGrid/ComputeGridValuePerFrame.hpp"
+#include "particles/particleToGrid/ComputeAveragedGridValuePerFrame.hpp"
