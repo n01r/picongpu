@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2016 Axel Huebl, Rene Widera, Felix Schmitt, 
+ * Copyright 2013-2016 Axel Huebl, Rene Widera, Felix Schmitt,
  * Benjamin Worpitz, Richard Pausch
  *
  * This file is part of PIConGPU.
@@ -31,6 +31,7 @@
 /** some forward declarations we need */
 #include "fields/Fields.def"
 #include "particles/particleToGrid/ComputeGridValuePerFrame.def"
+#include "particles/particleToGrid/ComputeAverageBulkEnergy.hpp"
 
 namespace picongpu
 {
@@ -63,6 +64,11 @@ namespace picongpu
             CreateEnergyDensityOperation<bmpl::_1>
             >::type EnergyDensity_Seq;
 
+    /* Average bulk energy section */
+    typedef bmpl::transform<
+            VectorAllSpecies,
+            ComputeAverageBulkEnergy<bmpl::_1>
+            >::type BulkEnergy_Seq;
 
     /** FieldTmpSolvers groups all solvers that create data for FieldTmp ******
      *
@@ -71,7 +77,8 @@ namespace picongpu
     typedef MakeSeq<
         Density_Seq,
         Counter_Seq,
-        EnergyDensity_Seq
+        EnergyDensity_Seq,
+        BulkEnergy_Seq
     >::type FieldTmpSolvers;
 
 

@@ -1,0 +1,23 @@
+/* 
+ * File:   AvgBulkEnergy.def
+ * Author: noir
+ *
+ * Created on 11. Mai 2016, 16:49
+ */
+
+#ifndef AVGBULKENERGY_DEF
+#define	AVGBULKENERGY_DEF
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
+
+
+
+#ifdef	__cplusplus
+}
+#endif
+
+#endif	/* AVGBULKENERGY_DEF */
+
