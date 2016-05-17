@@ -28,3 +28,4 @@
 #include "particles/particleToGrid/derivedAttributes/Energy.hpp"
 #include "particles/particleToGrid/derivedAttributes/MomentumComponent.hpp"
 #include "particles/particleToGrid/derivedAttributes/LarmorPower.hpp"
+#include "particles/particleToGrid/derivedAttributes/Weighting.hpp"
