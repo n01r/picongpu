@@ -30,6 +30,8 @@
 
 #include "particles/ionization/byField/ionizers.def"
 #include "particles/ionization/byField/ionizers.hpp"
+#include "particles/ionization/byCollision/ionizers.def"
+#include "particles/ionization/byCollision/ionizers.hpp"
 
 namespace picongpu
 {

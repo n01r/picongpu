@@ -85,7 +85,15 @@ namespace ionization
                 float_X T_F = T_0 / (float_X(1.) + T_0);
 
                 /* for all the fitting parameters @see TFFittingParameters.def */
-                float_X   A = TFA1 * math::pow(T_0,TFA2) + TFA3 * math::pow(T_0,TFA4);
+
+                /** this is totally weird - I have to define temporary variables because
+                 * otherwise the math::pow function won't recognize those at the
+                 * exponent position */
+                float_X TFA2_temp = TFA2;
+                float_X TFA4_temp = TFA4;
+                float_X TFBeta_temp = TFBeta;
+
+                float_X   A = TFA1 * math::pow(T_0,TFA2_temp) + TFA3 * math::pow(T_0,TFA4_temp);
 
                 float_X   B = -math::exp(TFB0 + TFB1*T_F + TFB2*math::pow(T_F,float_X(7.)));
 
@@ -96,17 +104,20 @@ namespace ionization
 
                 float_X Q_1 = A * math::pow(R,B);
 
-                float_X   Q = math::pow(math::pow(R,C) + math::pow(Q_1,C), float_X(1./C));
+                float_X   Q = math::pow(math::pow(R,C) + math::pow(Q_1,C), float_X(1.)/C);
 
-                float_X   x = TFAlpha * math::pow(Q,TFBeta);
+                float_X   x = TFAlpha * math::pow(Q,TFBeta_temp);
 
                 /* Thomas-Fermi average ionization state */
                 float_X ZStar = protonNumber * x / (float_X(1.) + x + math::sqrt(float_X(1.) + float_X(2.)*x));
 
 
-                /* set new particle charge state by rounding the average
-                 * charge state towards the nearest integer */
-                parentIon[boundElectrons_] = float_X(1.*math::float2int_rn(ZStar));
+                /* determine the new number of bound electrons from the TF ionization state */
+                float_X newBoundElectrons = protonNumber - float_X(math::float2int_rn(ZStar));
+                /* safety check to avoid double counting since recombination is not yet implemented */
+                if (newBoundElectrons < parentIon[boundElectrons_])
+                    /* update the particle attribute only if more free electrons are to be created */
+                    parentIon[boundElectrons_] = newBoundElectrons;
             }
 
         }

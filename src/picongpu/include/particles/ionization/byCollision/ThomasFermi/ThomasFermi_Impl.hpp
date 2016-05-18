@@ -37,6 +37,9 @@
 
 #include "particles/ParticlesFunctors.hpp"
 
+#include "particles/particleToGrid/ComputeGridValuePerFrame.def"
+#include "particles/particleToGrid/ComputeGridValuePerFrame.def"
+
 namespace picongpu
 {
 namespace particles
@@ -60,23 +63,25 @@ namespace ionization
 
         typedef typename SrcSpecies::FrameType FrameType;
 
-        /* specify field to particle interpolation scheme */
-        typedef typename PMacc::traits::Resolve<
-            typename GetFlagType<FrameType,interpolation<> >::type
-        >::type Field2ParticleInterpolation;
+        /** Solvers for electron macroparticle energy and electron macroparticle weighting
+         *
+         * Those are used to calculate the average bulk electron energy
+         * with respect to the cell the ion is located in
+         *
+         * \todo Get the bulk energy of all electrons in the simulation,
+         *       not only the of the destination species
+         */
+        //typedef typename particleToGrid::CreateEnergyOperation<T_DestSpecies>::type::Solver EnergySolver;
+        //typedef typename particleToGrid::CreateWeightingOperation<T_DestSpecies>::type::Solver WeightingSolver;
 
-        /* margins around the supercell for the interpolation of the field on the cells */
-        typedef typename GetMargin<Field2ParticleInterpolation>::LowerMargin LowerMargin;
-        typedef typename GetMargin<Field2ParticleInterpolation>::UpperMargin UpperMargin;
-
-        /* relevant area of a block */
-        typedef SuperCellDescription<
-            typename MappingDesc::SuperCellSize,
-            LowerMargin,
-            UpperMargin
-            > BlockArea;
-
-        BlockArea BlockDescription;
+        /** Solver for density of the ion species
+         *
+         *  \todo Include all ion species because the model requires the
+         *        density of ionic potential wells
+         *  \todo Implement the real density and rename density to charge density
+         *        because this is still what is implemented now
+         */
+        //typedef typename particleToGrid::CreateDensityOperation<T_SrcSpecies>::type::Solver DensitySolver;
 
         private:
 
@@ -84,28 +89,28 @@ namespace ionization
             typedef particles::ionization::AlgorithmThomasFermi IonizationAlgorithm;
 
             typedef MappingDesc::SuperCellSize TVec;
-
-            /* "temperature" value type */
-            typedef FieldTmp::ValueType ValueType_T;
-            /* global memory "temperature"-field device databox */
-            FieldTmp::DataBoxType temperatureBox;
-
-            /* shared memory "temperature"-field device databox */
-            PMACC_ALIGN(cachedT, DataBox<SharedBox<ValueType_T, typename BlockArea::FullSuperCellSize,0> >);
+//
+//            /* "temperature" value type */
+//            typedef FieldTmp::ValueType ValueType_T;
+//            /* global memory "temperature"-field device databox */
+//            FieldTmp::DataBoxType temperatureBox;
+//
+//            /* shared memory "temperature"-field device databox */
+//            PMACC_ALIGN(cachedT, DataBox<SharedBox<ValueType_T, typename BlockArea::FullSuperCellSize,0> >);
 
         public:
             /* host constructor */
             ThomasFermi_Impl(const uint32_t currentStep)
             {
-                DataConnector &dc = Environment<>::get().DataConnector();
-                /* initialize pointers on host-side "temperature"-field databox */
-                FieldTmp* fieldTmp = &(dc.getData<FieldTmp > (FieldTmp::getName(), true));
-                /* initialize device-side "temperature"-field databox */
-                temperatureBox = fieldTmp->getDeviceDataBox();
-
-                AbbbEhoiwehfoiwhefilhnalihförngösdfngsöldfnbsöjdfbnadkfnasködfbnskdfbnskdf.bnsd.kbnsdk.gbnsk.dgbnskd.gbn
-                jdsfnvjsdhnfuiovgahruglhfuivhalfiuvnaifnviafnviefhnvaihvnafhnvafnva
-                Hier weitermachen!
+//                DataConnector &dc = Environment<>::get().DataConnector();
+//                /* initialize pointers on host-side "temperature"-field databox */
+//                FieldTmp* fieldTmp = &(dc.getData<FieldTmp > (FieldTmp::getName(), true));
+//                /* initialize device-side "temperature"-field databox */
+//                temperatureBox = fieldTmp->getDeviceDataBox();
+//
+//                AbbbEhoiwehfoiwhefilhnalihförngösdfngsöldfnbsöjdfbnadkfnasködfbnskdfbnskdf.bnsd.kbnsdk.gbnsk.dgbnskd.gbn
+//                jdsfnvjsdhnfuiovgahruglhfuivhalfiuvnaifnviafnviefhnvaihvnafhnvafnva
+//                Hier weitermachen!
 
             }
 
@@ -128,27 +133,7 @@ namespace ionization
             DINLINE void init(const DataSpace<simDim>& blockCell, const int& linearThreadIdx, const DataSpace<simDim>& localCellOffset)
             {
 
-                /* caching of E and B fields */
-                cachedB = CachedBox::create < 0, ValueType_B > (BlockArea());
-                cachedE = CachedBox::create < 1, ValueType_E > (BlockArea());
 
-                /* instance of nvidia assignment operator */
-                nvidia::functors::Assign assign;
-                /* copy fields from global to shared */
-                PMACC_AUTO(fieldBBlock, bBox.shift(blockCell));
-                ThreadCollective<BlockArea> collective(linearThreadIdx);
-                collective(
-                          assign,
-                          cachedB,
-                          fieldBBlock
-                          );
-                /* copy fields from global to shared */
-                PMACC_AUTO(fieldEBlock, eBox.shift(blockCell));
-                collective(
-                          assign,
-                          cachedE,
-                          fieldEBlock
-                          );
             }
 
             /** Functor implementation
@@ -167,24 +152,21 @@ namespace ionization
                 const int particleCellIdx = particle[localCellIdx_];
                 /* multi-dim coordinate of the local cell inside the super cell */
                 DataSpace<TVec::dim> localCell(DataSpaceOperations<TVec::dim>::template map<TVec > (particleCellIdx));
-                /* interpolation of E- */
-                const fieldSolver::numericalCellType::traits::FieldPosition<FieldE> fieldPosE;
-                ValueType_E eField = Field2ParticleInterpolation()
-                    (cachedE.shift(localCell).toCursor(), pos, fieldPosE());
-                /*                     and B-field on the particle position */
-                const fieldSolver::numericalCellType::traits::FieldPosition<FieldB> fieldPosB;
-                ValueType_B bField = Field2ParticleInterpolation()
-                    (cachedB.shift(localCell).toCursor(), pos, fieldPosB());
 
                 /* define number of bound macro electrons before ionization */
                 float_X prevBoundElectrons = particle[boundElectrons_];
 
+                /* density dummy for testing / g/cm^3*/
+                float_X density = 10.0;
+                /* "temperature" dummy for testing / eV */
+                float_X temperature = 10.0;
+
                 /* this is the point where actual ionization takes place */
                 IonizationAlgorithm ionizeAlgo;
                 ionizeAlgo(
-                     bField, eField,
-                     particle
-                     );
+                    temperature, density,
+                    particle
+                    );
 
                 /* determine number of new macro electrons to be created */
                 newMacroElectrons = prevBoundElectrons - particle[boundElectrons_];
