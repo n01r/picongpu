@@ -21,17 +21,18 @@
 #pragma once
 
 #include "simulation_defines.hpp"
-#include "traits/Resolve.hpp"
-#include "mappings/kernel/AreaMapping.hpp"
+//#include "traits/Resolve.hpp"
+//#include "mappings/kernel/AreaMapping.hpp"
 
-#include "fields/FieldB.hpp"
-#include "fields/FieldE.hpp"
+//#include "fields/FieldB.hpp"
+//#include "fields/FieldE.hpp"
 
 #include "particles/ionization/byField/BSI/BSI.def"
 #include "particles/ionization/byField/BSI/AlgorithmBSIHydrogenLike.hpp"
 #include "particles/ionization/byField/BSI/AlgorithmBSIEffectiveZ.hpp"
 #include "particles/ionization/byField/BSI/AlgorithmBSIStarkShifted.hpp"
 #include "particles/ionization/ionization.hpp"
+#include "particles/ionization/ionizationMethods.hpp"
 
 #include "compileTime/conversion/TypeToPointerPair.hpp"
 #include "memory/boxes/DataBox.hpp"
@@ -45,9 +46,7 @@ namespace particles
 namespace ionization
 {
 
-    /** \struct BSI_Impl
-     *
-     * \brief Barrier Suppression Ionization - Implementation
+    /** Barrier Suppression Ionization - Implementation
      *
      * \tparam T_DestSpecies electron species to be created
      * \tparam T_SrcSpecies particle species that is ionized
@@ -61,53 +60,25 @@ namespace ionization
 
         typedef typename SrcSpecies::FrameType FrameType;
 
-        /* specify field to particle interpolation scheme */
-        typedef typename PMacc::traits::Resolve<
-            typename GetFlagType<FrameType,interpolation<> >::type
-        >::type Field2ParticleInterpolation;
-
-        /* margins around the supercell for the interpolation of the field on the cells */
-        typedef typename GetMargin<Field2ParticleInterpolation>::LowerMargin LowerMargin;
-        typedef typename GetMargin<Field2ParticleInterpolation>::UpperMargin UpperMargin;
-
-        /* relevant area of a block */
-        typedef SuperCellDescription<
-            typename MappingDesc::SuperCellSize,
-            LowerMargin,
-            UpperMargin
-            > BlockArea;
-
-        BlockArea BlockDescription;
-
         private:
 
             /* define ionization ALGORITHM (calculation) for ionization MODEL */
             typedef T_IonizationAlgorithm IonizationAlgorithm;
 
-            typedef MappingDesc::SuperCellSize TVec;
-
-            typedef FieldE::ValueType ValueType_E;
-            /* global memory EM-field device databoxes */
-            FieldE::DataBoxType eBox;
-            /* shared memory EM-field device databoxes */
-            PMACC_ALIGN(cachedE, DataBox<SharedBox<ValueType_E, typename BlockArea::FullSuperCellSize,1> >);
+            /* object for caching and interpolating the electric field to the particle position */
+            CacheEField<FrameType> cacheEField;
 
         public:
             /* host constructor */
             BSI_Impl(const uint32_t currentStep)
             {
-                DataConnector &dc = Environment<>::get().DataConnector();
-                /* initialize pointers on host-side E-(B-)field databoxes */
-                FieldE* fieldE = &(dc.getData<FieldE > (FieldE::getName(), true));
-                /* initialize device-side E-(B-)field databoxes */
-                eBox = fieldE->getDeviceDataBox();
-
+                /* implicitly constructs classes like CacheEField */
             }
 
             /** Initialization function on device
              *
-             * \brief Cache EM-fields on device
-             *         and initialize possible prerequisites for ionization, like e.g. random number generator.
+             * \brief Cache necessary quantities on device (e.g. like EM-fields)
+             *        and initialize possible prerequisites for ionization, like e.g. random number generator.
              *
              * This function will be called inline on the device which must happen BEFORE threads diverge
              * during loop execution. The reason for this is the `__syncthreads()` call which is necessary after
@@ -123,20 +94,7 @@ namespace ionization
             DINLINE void init(const DataSpace<simDim>& blockCell, const int& linearThreadIdx, const DataSpace<simDim>& localCellOffset)
             {
 
-                /* caching of E field */
-                cachedE = CachedBox::create < 1, ValueType_E > (BlockArea());
-
-                /* instance of nvidia assignment operator */
-                nvidia::functors::Assign assign;
-
-                ThreadCollective<BlockArea> collective(linearThreadIdx);
-                /* copy fields from global to shared */
-                PMACC_AUTO(fieldEBlock, eBox.shift(blockCell));
-                collective(
-                          assign,
-                          cachedE,
-                          fieldEBlock
-                          );
+                cacheEField.init(blockCell,linearThreadIdx,localCellOffset);
             }
 
             /** Functor implementation
@@ -150,15 +108,8 @@ namespace ionization
             {
                 /* alias for the single macro-particle */
                 PMACC_AUTO(particle,ionFrame[localIdx]);
-                /* particle position, used for field-to-particle interpolation */
-                floatD_X pos = particle[position_];
-                const int particleCellIdx = particle[localCellIdx_];
-                /* multi-dim coordinate of the local cell inside the super cell */
-                DataSpace<TVec::dim> localCell(DataSpaceOperations<TVec::dim>::template map<TVec > (particleCellIdx));
-                /* interpolation of E */
-                const fieldSolver::numericalCellType::traits::FieldPosition<FieldE> fieldPosE;
-                ValueType_E eField = Field2ParticleInterpolation()
-                    (cachedE.shift(localCell).toCursor(), pos, fieldPosE());
+
+                PMACC_AUTO(eField , cacheEField(particle));
 
                 /* define number of bound macro electrons before ionization */
                 float_X prevBoundElectrons = particle[boundElectrons_];

@@ -27,6 +27,12 @@
 #include "particles/operations/Assign.hpp"
 #include "traits/attribute/GetMass.hpp"
 
+#include "traits/Resolve.hpp"
+#include "mappings/kernel/AreaMapping.hpp"
+
+#include "fields/FieldB.hpp"
+#include "fields/FieldE.hpp"
+
 #include "nvidia/rng/RNG.hpp"
 #include "nvidia/rng/methods/Xor.hpp"
 #include "nvidia/rng/distributions/Uniform_float.hpp"
@@ -148,6 +154,98 @@ namespace ionization
             PMACC_ALIGN(isInitialized, bool);
             PMACC_ALIGN(seed, uint32_t);
             PMACC_ALIGN(localCells, DataSpace<simDim>);
+    };
+
+    /** \struct cacheEField
+     *
+     * \brief Object that caches the electric field and does the field-to-particle
+     *        interpolation.
+     *
+     * Calling the functor returns the electrical field value at the particle
+     * position.
+     */
+    template<typename T_FrameType>
+    struct CacheEField
+    {
+
+        typedef T_FrameType FrameType;
+
+        /* specify field to particle interpolation scheme */
+        typedef typename PMacc::traits::Resolve<
+            typename GetFlagType<FrameType,interpolation<> >::type
+        >::type Field2ParticleInterpolation;
+
+        /* margins around the supercell for the interpolation of the field on the cells */
+        typedef typename GetMargin<Field2ParticleInterpolation>::LowerMargin LowerMargin;
+        typedef typename GetMargin<Field2ParticleInterpolation>::UpperMargin UpperMargin;
+
+        /* relevant area of a block */
+        typedef SuperCellDescription<
+            typename MappingDesc::SuperCellSize,
+            LowerMargin,
+            UpperMargin
+            > BlockArea;
+
+        BlockArea BlockDescription;
+
+        private:
+
+            typedef MappingDesc::SuperCellSize TVec;
+
+            typedef FieldE::ValueType ValueType_E;
+            /* global memory EM-field device databoxes */
+            FieldE::DataBoxType eBox;
+            /* shared memory EM-field device databoxes */
+            PMACC_ALIGN(cachedE, DataBox<SharedBox<ValueType_E, typename BlockArea::FullSuperCellSize,1> >);
+        /* host constructor */
+
+        public:
+            CacheEField()
+            {
+                DataConnector &dc = Environment<>::get().DataConnector();
+                /* initialize pointers on host-side E-(B-)field databoxes */
+                FieldE* fieldE = &(dc.getData<FieldE > (FieldE::getName(), true));
+                /* initialize device-side E-(B-)field databoxes */
+                eBox = fieldE->getDeviceDataBox();
+            }
+
+            DINLINE void init(const DataSpace<simDim>& blockCell, const int& linearThreadIdx, const DataSpace<simDim>& localCellOffset)
+            {
+                /* caching of E field */
+                cachedE = CachedBox::create < 1, ValueType_E > (BlockArea());
+
+                /* instance of nvidia assignment operator */
+                nvidia::functors::Assign assign;
+
+                ThreadCollective<BlockArea> collective(linearThreadIdx);
+                /* copy fields from global to shared */
+                PMACC_AUTO(fieldEBlock, eBox.shift(blockCell));
+                collective(
+                          assign,
+                          cachedE,
+                          fieldEBlock
+                          );
+            }
+
+            /** Functor implementation
+             *
+             */
+            template<typename T_ParticleType>
+            DINLINE ValueType_E operator()(T_ParticleType& particle)
+            {
+                /* in-cell particle position, used for field-to-particle interpolation */
+                floatD_X pos = particle[position_];
+                const int particleCellIdx = particle[localCellIdx_];
+
+                /* multi-dim coordinate of the local cell inside the super cell */
+                DataSpace<TVec::dim> localCell(DataSpaceOperations<TVec::dim>::template map<TVec > (particleCellIdx));
+                /* interpolation of E */
+                const fieldSolver::numericalCellType::traits::FieldPosition<FieldE> fieldPosE;
+
+                ValueType_E eField = Field2ParticleInterpolation()
+                        (cachedE.shift(localCell).toCursor(), pos, fieldPosE());
+                return eField;
+            }
     };
 
 } // namespace ionization
