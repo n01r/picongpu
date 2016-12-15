@@ -34,20 +34,20 @@ namespace ionization
      * \url http://www.sciencedirect.com/science/article/pii/S0065219908601451
      * doi:10.1016/S0065-2199(08)60145-1
      */
-    BOOST_CONSTEXPR_OR_CONST float_X TFAlpha = 14.3139;
-    BOOST_CONSTEXPR_OR_CONST float_X TFBeta  =  0.6624;
+    constexpr float_X TFAlpha = 14.3139;
+    constexpr float_X TFBeta  =  0.6624;
 
-    BOOST_CONSTEXPR_OR_CONST float_X TFA1    =  3.323e-3;
-    BOOST_CONSTEXPR_OR_CONST float_X TFA2    =  9.718e-1;
-    BOOST_CONSTEXPR_OR_CONST float_X TFA3    =  9.26148e-5;
-    BOOST_CONSTEXPR_OR_CONST float_X TFA4    =  3.10165;
+    constexpr float_X TFA1    =  3.323e-3;
+    constexpr float_X TFA2    =  9.718e-1;
+    constexpr float_X TFA3    =  9.26148e-5;
+    constexpr float_X TFA4    =  3.10165;
 
-    BOOST_CONSTEXPR_OR_CONST float_X TFB0    = -1.7630;
-    BOOST_CONSTEXPR_OR_CONST float_X TFB1    =  1.43175;
-    BOOST_CONSTEXPR_OR_CONST float_X TFB2    =  0.31546;
+    constexpr float_X TFB0    = -1.7630;
+    constexpr float_X TFB1    =  1.43175;
+    constexpr float_X TFB2    =  0.31546;
 
-    BOOST_CONSTEXPR_OR_CONST float_X TFC1    = -0.366667;
-    BOOST_CONSTEXPR_OR_CONST float_X TFC2    =  0.983333;
+    constexpr float_X TFC1    = -0.366667;
+    constexpr float_X TFC2    =  0.983333;
 
 } // namespace ionization
 } // namespace particles
