@@ -89,6 +89,8 @@
 #include "plugins/IsaacPlugin.hpp"
 #endif
 
+#include "plugins/CountMacroParticlesPerCell.hpp"
+
 namespace picongpu
 {
 
@@ -169,6 +171,7 @@ private:
     /* define species plugins */
     typedef bmpl::vector <
         CountParticles<bmpl::_1>,
+        CountMacroParticlesPerCell<bmpl::_1>,
         EnergyParticles<bmpl::_1>,
         BinEnergyParticles<bmpl::_1>,
         LiveViewPlugin<bmpl::_1>,
