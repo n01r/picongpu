@@ -24,6 +24,112 @@
 
 #include "mpi/MPIReduce.hpp"
 
+namespace PMacc
+{
+struct KernelCountMacroParticlesPerCell
+{
+    template<class PBox, class Filter, class Mapping>
+    DINLINE void operator()(
+        PBox pb,
+        uint32_t* inCellCounterPtr,
+        Mapping mapper
+    ) const
+    {
+
+        typedef typename PBox::FramePtr FramePtr;
+        const uint32_t Dim = Mapping::Dim;
+
+        PMACC_SMEM( frame, FramePtr );
+        PMACC_SMEM( counter, int );
+        PMACC_SMEM( particlesInSuperCell, lcellId_t );
+
+
+        typedef typename Mapping::SuperCellSize SuperCellSize;
+
+        const DataSpace<Dim> threadIndex(threadIdx);
+        const int linearThreadIdx = DataSpaceOperations<Dim>::template map<SuperCellSize > (threadIndex);
+        const DataSpace<Dim> superCellIdx(mapper.getSuperCellIndex(DataSpace<Dim > (blockIdx)));
+
+        /* multi-dim offset from the origin of the local domain on GPU
+         * to the origin of the block of the in unit of cells
+         */
+        const DataSpace<Dim> blockCell = superCellIdx * SuperCellSize::toRT();
+
+        /* subtract guarding cells to only have the simulation volume */
+        const DataSpace<Dim> globalCellIndex = (superCellIdx * SuperCellSize::toRT() + threadIndex) - mapper.getGuardingSuperCells() * SuperCellSize::toRT();
+
+        inCellCounterPtr[globalCellIndex] = pb.getCellCount(superCellIdx)[linearThreadIdx];
+
+//        if (linearThreadIdx == 0)
+//        {
+//            frame = pb.getLastFrame(superCellIdx);
+//            particlesInSuperCell = pb.getSuperCell(superCellIdx).getSizeLastFrame();
+//            counter = 0;
+//        }
+//        __syncthreads();
+//        if (!frame.isValid())
+//            return; //end kernel if we have no frames
+//        filter.setSuperCellPosition((superCellIdx - mapper.getGuardingSuperCells()) * mapper.getSuperCellSize());
+//        while (frame.isValid())
+//        {
+//            if (linearThreadIdx < particlesInSuperCell)
+//            {
+//                if (filter(*frame, linearThreadIdx))
+//                    nvidia::atomicAllInc(&counter);
+//            }
+//            __syncthreads();
+//            if (linearThreadIdx == 0)
+//            {
+//                frame = pb.getPreviousFrame(frame);
+//                particlesInSuperCell = math::CT::volume<SuperCellSize>::type::value;
+//            }
+//            __syncthreads();
+//        }
+
+        __syncthreads();
+//        if (linearThreadIdx == 0)
+//        {
+//            atomicAdd(gCounter, (uint64_cu) counter);
+//        }
+    }
+};
+
+struct NumberMacroParticlesPerCell
+{
+
+    /** Get particle count
+     *
+     * @tparam AREA area were particles are counted (CORE, BORDER, GUARD)
+     *
+     * @param buffer source particle buffer
+     * @param cellDescription instance of MappingDesction
+     * @param filter filter instance which must inharid from PositionFilter
+     * @return number of particles in defined area
+     */
+    template<uint32_t AREA, class PBuffer, class CellDesc>
+    static uint32_t countOnDevice(PBuffer& buffer, CellDesc cellDescription)
+    {
+        /* Holds the number of particles per cell as in a SIMDIM buffer */
+        GridBuffer<uint32_t, SIMDIM> inCellCounter(cellDescription.getGridLayout());
+
+        auto block = CellDesc::SuperCellSize::toRT();
+
+        AreaMapping<AREA, CellDesc> mapper(cellDescription);
+
+        PMACC_KERNEL(KernelCountMacroParticlesPerCell{})
+            (mapper.getGridDim(), block)
+            (buffer.getDeviceParticlesBox(),
+             inCellCounter.getDeviceBuffer().getBasePointer(),
+             mapper);
+
+        inCellCounter.deviceToHost();
+        // return *(inCellCounter.getHostBuffer().getDataBox());
+        return 0;
+    }
+};
+
+} // namespace PMacc
+
 namespace picongpu
 {
 using namespace PMacc;
@@ -33,6 +139,7 @@ class CountMacroParticlesPerCell : public ILightweightPlugin
 {
 
     ParticlesType *particles;
+    MappingDesc *cellDescription;
     std::ofstream outFile;
     /** @todo have only rank 0 create a file */
     bool writeToFile;
@@ -47,7 +154,9 @@ public:
     pluginName("CountMacroParticles: count macro particles of a species in a cell"),
     pluginPrefix(ParticlesType::FrameType::getName() + std::string("_inCellCount")),
     filename(pluginPrefix + ".dat"),
-    writeToFile(false)
+    writeToFile(false),
+    particles(nullptr),
+    cellDescription(nullptr)
     {
         /* register our plugin during creation */
         Environment<>::get().PluginConnector().registerPlugin(this);
@@ -60,6 +169,10 @@ public:
 
     void notify(uint32_t currentStep)
     {
+        DataConnector &dc = Environment<>::get().DataConnector();
+
+        particles = &(dc.getData< ParticlesType > (ParticlesType::FrameType::getName(), true));
+
         countMacroParticles< CORE + BORDER >(currentStep);
     }
 
@@ -120,6 +233,15 @@ private:
     template< uint32_t AREA >
     void countMacroParticles(uint32_t currentStep)
     {
+        const SubGrid<simDim>& subGrid = Environment<simDim>::get().SubGrid();
+        const DataSpace<simDim> localSize(subGrid.getLocalDomain().size);
+
+        /*count local particles*/
+        PMacc::NumberMacroParticlesPerCell::countOnDevice<AREA>(
+            *particles,
+            *cellDescription
+        );
+
         /* calls a kernel that accesses the frames for the number of particles
          * in each cell, transfers that data to the host and writes it to a file
          */
