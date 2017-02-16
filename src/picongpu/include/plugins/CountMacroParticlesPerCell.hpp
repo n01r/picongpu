@@ -28,10 +28,10 @@ namespace PMacc
 {
 struct KernelCountMacroParticlesPerCell
 {
-    template<class PBox, class Filter, class Mapping>
+    template<class PBox, class T_DataBox, class Mapping>
     DINLINE void operator()(
         PBox pb,
-        uint32_t* inCellCounterPtr,
+        T_DataBox& inCellCounter,
         Mapping mapper
     ) const
     {
@@ -58,7 +58,7 @@ struct KernelCountMacroParticlesPerCell
         /* subtract guarding cells to only have the simulation volume */
         const DataSpace<Dim> globalCellIndex = (superCellIdx * SuperCellSize::toRT() + threadIndex) - mapper.getGuardingSuperCells() * SuperCellSize::toRT();
 
-        inCellCounterPtr[globalCellIndex] = pb.getCellCount(superCellIdx)[linearThreadIdx];
+        inCellCounter(globalCellIndex) = pb.getCellCount(superCellIdx)[linearThreadIdx];
 
 //        if (linearThreadIdx == 0)
 //        {
@@ -103,28 +103,26 @@ struct NumberMacroParticlesPerCell
      *
      * @param buffer source particle buffer
      * @param cellDescription instance of MappingDesction
-     * @param filter filter instance which must inharid from PositionFilter
+     * @param filter filter instance which must inherit from PositionFilter
      * @return number of particles in defined area
      */
-    template<uint32_t AREA, class PBuffer, class CellDesc>
-    static uint32_t countOnDevice(PBuffer& buffer, CellDesc cellDescription)
+    template<uint32_t AREA, class PBuffer, class CellDesc, class T_inCellCounter>
+    static void countOnDevice(PBuffer& buffer, CellDesc cellDescription, T_inCellCounter& inCellCounter)
     {
-        /* Holds the number of particles per cell as in a SIMDIM buffer */
-        GridBuffer<uint32_t, SIMDIM> inCellCounter(cellDescription.getGridLayout());
 
         auto block = CellDesc::SuperCellSize::toRT();
 
         AreaMapping<AREA, CellDesc> mapper(cellDescription);
 
+        printf("Pointer address of inCellCounter #3 %p : \n", &inCellCounter);
+
         PMACC_KERNEL(KernelCountMacroParticlesPerCell{})
             (mapper.getGridDim(), block)
             (buffer.getDeviceParticlesBox(),
-             inCellCounter.getDeviceBuffer().getBasePointer(),
+             inCellCounter.getDeviceBuffer().getDataBox(),
              mapper);
 
         inCellCounter.deviceToHost();
-        // return *(inCellCounter.getHostBuffer().getDataBox());
-        return 0;
     }
 };
 
@@ -138,6 +136,9 @@ template<class ParticlesType>
 class CountMacroParticlesPerCell : public ILightweightPlugin
 {
 
+private:
+    uint32_t notifyPeriod;
+    GridBuffer<uint32_t, simDim>* inCellCounter;
     ParticlesType *particles;
     MappingDesc *cellDescription;
     std::ofstream outFile;
@@ -156,10 +157,16 @@ public:
     filename(pluginPrefix + ".dat"),
     writeToFile(false),
     particles(nullptr),
-    cellDescription(nullptr)
+    cellDescription(nullptr),
+    inCellCounter(nullptr)
     {
         /* register our plugin during creation */
         Environment<>::get().PluginConnector().registerPlugin(this);
+    }
+
+    virtual ~CountMacroParticlesPerCell()
+    {
+
     }
 
     std::string pluginGetName() const
@@ -186,10 +193,8 @@ public:
 
     void setMappingDescription(MappingDesc *cellDescription)
     {
+        this->cellDescription = cellDescription;
     }
-
-private:
-    uint32_t notifyPeriod;
 
     void pluginLoad()
     {
@@ -197,6 +202,9 @@ private:
         {
             /** determine rank 0 here to write output only once */
             writeToFile = reduce.hasResult(mpi::reduceMethods::Reduce());
+
+            inCellCounter = new GridBuffer<uint32_t, simDim>(cellDescription->getGridLayout());
+            printf("Pointer address of inCellCounter #1 %p : \n", inCellCounter);
 
             if (writeToFile)
             {
@@ -227,20 +235,30 @@ private:
                     std::cerr << "Error on flushing file [" << filename << "]. " << std::endl;
                 outFile.close();
             }
+            __delete(inCellCounter);
         }
     }
 
     template< uint32_t AREA >
     void countMacroParticles(uint32_t currentStep)
     {
-        const SubGrid<simDim>& subGrid = Environment<simDim>::get().SubGrid();
-        const DataSpace<simDim> localSize(subGrid.getLocalDomain().size);
+        printf("Pointer address of inCellCounter #2 %p : \n", inCellCounter);
+        inCellCounter->getHostBuffer().setValue(0);
+        inCellCounter->getDeviceBuffer().setValue(0);
 
         /*count local particles*/
         PMacc::NumberMacroParticlesPerCell::countOnDevice<AREA>(
             *particles,
-            *cellDescription
+            *cellDescription,
+            *inCellCounter
         );
+
+        unsigned int DataSpace<SIMDIM> myIndex;
+        myIndex[0] = 1;
+        myIndex[1] = 1;
+        myIndex[2] = 1;
+
+        printf("inCellCounter Value #4 %u : \n", inCellCounter(myIndex));
 
         /* calls a kernel that accesses the frames for the number of particles
          * in each cell, transfers that data to the host and writes it to a file
