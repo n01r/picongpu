@@ -25,6 +25,7 @@
 #include "particles/particleToGrid/derivedAttributes/ChargeDensity.hpp"
 #include "particles/particleToGrid/derivedAttributes/MidCurrentDensityComponent.hpp"
 #include "particles/particleToGrid/derivedAttributes/EnergyDensity.hpp"
+#include "particles/particleToGrid/derivedAttributes/EnergyDensityCutoff.hpp"
 #include "particles/particleToGrid/derivedAttributes/Energy.hpp"
 #include "particles/particleToGrid/derivedAttributes/MomentumComponent.hpp"
 #include "particles/particleToGrid/derivedAttributes/LarmorPower.hpp"
